@@ -8,20 +8,24 @@ from tfhe.keys import(
     tfhe_key_pair
 )
 from openfhe import(
-    CryptoContext,
-    CCParamsCKKSRNS
+    BinFHEContext as bfc,
+    CryptoContext as cc,
+    CCParamsCKKSRNS as ckks_of
 )
 
-# ofhe_methods=dict(["generate_key", KeyGen], 
-# ["encrypt", Encrypt], ["decrypt", Decrypt], 
-# ["add", EvalAdd])
+
+ofhe_methods=dict([("generate_key", bfc.KeyGen), 
+("encrypt", cc.Encrypt), ("decrypt", cc.Decrypt),
+])
+
+# add evalAdd method later
 
 tfhe_methods=dict([("generate_key", tfhe_key_pair),
 ("encrypt", tfhe_encrypt), ("decrypt", tfhe_decrypt)])
 
 def get_methods(model, method):
-    # if(model==ofhe):
-    #     return ofhe_methods[method]
+    if(model==ofhe):
+        return ofhe_methods[method]
     if(model==tfhe):
         return tfhe_methods[method]
 
