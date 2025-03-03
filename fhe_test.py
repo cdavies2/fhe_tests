@@ -9,15 +9,17 @@ from tfhe.keys import(
     tfhe_key_pair
 )
 from openfhe import(
-    BinFHEContext as bfc,
-    CryptoContext as cc,
-    CCParamsCKKSRNS as ckks_of,
+    BinFHEContext,
+    CryptoContext,
+    CCParamsCKKSRNS,
+    GenCryptoContext,
+    PKESchemeFeature,
     Plaintext
 )
 
 
-ofhe_methods=dict([("generate_key", bfc.KeyGen), 
-("encrypt", cc.Encrypt), ("decrypt", cc.Decrypt),
+ofhe_methods=dict([("generate_key", BinFHEContext.KeyGen), 
+("encrypt", CryptoContext.Encrypt), ("decrypt", CryptoContext.Decrypt),
 ])
 
 # add evalAdd method later
@@ -32,20 +34,51 @@ def get_methods(model, method):
         return tfhe_methods[method]
 
 
-@pytest.mark.parametrize("model", [tfhe, ofhe], ids=["TFHE", "OpenFHE"])
-def test_enc_dec(model):
+@pytest.mark.parametrize("model", [ofhe], ids=["OpenFHE"])
+def test_enc_dec_ofhe(model):
+    plain_t=[2.0, 1.0, 2.0, 1.0]
+    plain_len=len(plain_t)
+    
+    mult_depth = 1
+    scale_mod_size = 50
+    batch_size = 8
+    
+    parameters = CCParamsCKKSRNS()
+    parameters.SetMultiplicativeDepth(mult_depth)
+    parameters.SetScalingModSize(scale_mod_size)
+    parameters.SetBatchSize(batch_size)
+    cc = GenCryptoContext(parameters)
+    cc.Enable(PKESchemeFeature.PKE)
+    cc.Enable(PKESchemeFeature.KEYSWITCH)
+    cc.Enable(PKESchemeFeature.LEVELEDSHE)
+    
+    
+    keys = cc.KeyGen()
+    cc.EvalMultKeyGen(keys.secretKey)
+    cc.EvalRotateKeyGen(keys.secretKey, [1, -2])
+    precision=1
+    
+    ptx=cc.MakeCKKSPackedPlaintext(plain_t)
+    c1 = cc.Encrypt(keys.publicKey, ptx)
+    dec = cc.Decrypt(c1, keys.secretKey)
+
+    dec.SetLength(plain_len)
+    dec.GetFormattedValues(precision)
+    vals=dec.GetRealPackedValue()
+    final=[]
+    for i in vals:
+        rounded=round(i, 1)
+        final.append(rounded)
+        
+    assert np.all(plain_t == final) #numpy.all checks if array elements are the same
+
+@pytest.mark.parametrize("model", [tfhe], ids=["TFHE"])
+def test_enc_dec_tfhe(model):
     rng = np.random.RandomState(123)
     plain_t=[0, 1, 0, 1]
-    plain_len=len(plain_t)
-    # poly=Polynomial(plain_t)
-    # plain_o=Plaintext.Decode(poly)
-    if model==tfhe:
-        private, public=get_methods(model, "generate_key")(rng)
-        cipher=get_methods(model, "encrypt")(rng, private, np.array(plain_t))
-        dec=get_methods(model, "decrypt")(private, cipher)
-    else:
-        plain_o=cc.MakePackedPlaintext(plain_t, 1, 0)
-        private, public=get_methods(model, "generate_key")
-        cipher=get_methods(model, "encrypt")(np.array(plain_o), private)
-        dec=get_methods(model, "decrypt")(cipher, private)
-    assert np.all(plain_t == dec) #numpy.all checks if array elements are the same
+    private, public=get_methods(model, "generate_key")(rng)
+    cipher=get_methods(model, "encrypt")(rng, private, np.array(plain_t))
+    dec=get_methods(model, "decrypt")(private, cipher)
+    assert np.all(plain_t == dec)
+        
+    
