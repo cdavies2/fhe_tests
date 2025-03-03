@@ -1,13 +1,18 @@
 import os, pytest
 import openfhe as ofhe
-import numpy as np
-from numpy.polynomial import Polynomial
 import tfhe as tfhe
+import numpy as np
+# from numpy.polynomial import Polynomial
 from tfhe.keys import(
     tfhe_decrypt,
     tfhe_encrypt,
     tfhe_key_pair
 )
+from tfhe.utils import(
+    bitarray_to_int,
+    int_to_bitarray
+)
+
 from openfhe import(
     BinFHEContext,
     CryptoContext,
@@ -76,13 +81,42 @@ def test_enc_dec_ofhe(model):
         
     assert np.all(plain_t == final) #numpy.all checks if array elements are the same
 
-@pytest.mark.parametrize("model", [tfhe], ids=["TFHE"])
-def test_enc_dec_tfhe(model):
+
+# observe how tfhe encryption is performed using bits (1s and 0s), integers, and lists of integers
+@pytest.mark.parametrize("model, plaintext", 
+[
+    (tfhe, [0, 1, 0, 1]), 
+    (tfhe, 25),
+    (tfhe, [2, 4, 6, 8])
+], 
+ids=[
+    "TFHE bits", 
+    "TFHE int",
+    "TFHE list ints"
+])
+def test_enc_dec_tfhe(model, plaintext):
     rng = np.random.RandomState(123)
-    plain_t=[0, 1, 0, 1]
-    private, public=get_methods(model, "generate_key")(rng)
-    cipher=get_methods(model, "encrypt")(rng, private, np.array(plain_t))
-    dec=get_methods(model, "decrypt")(private, cipher)
-    assert np.all(plain_t == dec)
-        
+    plain_t=plaintext
+    bit_list=[]
+    if type(plaintext) == list:
+        for i in plaintext:
+            if i>1:
+                bit=int_to_bitarray(i)
+                bit_list.append(bit)
+    elif type(plaintext) == int:
+        plain_t=int_to_bitarray(plain_t)
     
+    if bit_list:
+        for i in bit_list:
+            dec = []
+            private, public=get_methods(model, "generate_key")(rng)
+            cipher=get_methods(model, "encrypt")(rng, private, np.array(i))
+            dec_item=get_methods(model, "decrypt")(private, cipher)
+            dec_item=bitarray_to_int(dec_item)
+            dec.append(dec_item) # need to debug this loop for a list of integers
+        assert np.all(plain_t == dec)
+    else:
+        private, public=get_methods(model, "generate_key")(rng)
+        cipher=get_methods(model, "encrypt")(rng, private, np.array(plain_t))
+        dec=get_methods(model, "decrypt")(private, cipher)
+        assert np.all(plain_t == dec)
