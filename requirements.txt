@@ -98,7 +98,7 @@ nvidia-nvjitlink-cu12==12.4.127
 nvidia-nvtx-cu12==12.4.127
 open3d-python==0.3.0.0
 openai==1.60.1
-openfhe @ file:///home/cdavies/fhe_schemes/openfhe-python
+openfhe==0.9.0
 overrides==7.7.0
 packaging==24.2
 pandocfilters==1.5.1
@@ -150,7 +150,6 @@ soupsieve==2.6
 stack-data==0.6.3
 sympy==1.13.1
 terminado==0.18.1
-tfhe-py @ file:///home/cdavies/fhe_schemes/tfhe-py
 tinycss2==1.4.0
 tokenizers==0.21.0
 tomli_w==1.2.0
