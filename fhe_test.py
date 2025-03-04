@@ -69,8 +69,11 @@ ofhe_methods = {
 
 # add evalAdd method later
 
-tfhe_methods=dict([("generate_key", tfhe_key_pair),
-("encrypt", tfhe_encrypt), ("decrypt", tfhe_decrypt)])
+tfhe_methods = {
+    "generate_key": tfhe_key_pair,
+    "encrypt": tfhe_encrypt,
+    "decrypt": tfhe_decrypt
+}
 
 def get_methods(model, method):
     if(model==ofhe):

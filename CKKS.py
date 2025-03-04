@@ -124,7 +124,7 @@ class CKKSEncoder:
 
     def coordinate_wise_random_rounding(coordinates):
         # rounds coordinates randomly
-        r= round_coordinates(coordinates)
+        r = round_coordinates(coordinates) # noqa
         f=np.array([np.random.choice([c, c-1], 1, p=[1-c, c]) for c in r])
         # np.random.choice generates a random sample from a given 1-D array
 
@@ -134,9 +134,9 @@ class CKKSEncoder:
     
     def sigma_R_discretization(self, z):
         # Projects a vector on the lattice using coordinate wise random rounding
-        coordinates=self.compute_basis_coordinates(z)
+        coordinates=self.compute_basis_coordinates(z) # noqa
         #compute coordinates of the vector
-        rounded_coordinates=coordinate_wise_random_rounding(coordinates)
+        rounded_coordinates=coordinate_wise_random_rounding(coordinates) # noqa
         #round the coordinates
         y = np.matmul(self.sigma_R_basis.T, rounded_coordinates)
         #perform matrix multiplication between the transposed array and rounded coordinates

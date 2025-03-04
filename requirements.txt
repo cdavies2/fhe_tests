@@ -149,6 +149,7 @@ soupsieve==2.6
 stack-data==0.6.3
 sympy==1.13.1
 terminado==0.18.1
+tfhe-py @ git+https://github.com/pmuens/tfhe-py.git@5ca4a4218a15d3b9589719fa6beead3dedeadea4
 tinycss2==1.4.0
 tokenizers==0.21.0
 tomli_w==1.2.0
