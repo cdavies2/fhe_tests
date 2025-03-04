@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import os, pytest
 import openfhe as ofhe
 import tfhe as tfhe
@@ -40,11 +41,31 @@ def setup_ofhe_ckks(size):
     # Enabling this feature allows us to create public and private keys to use with our plaintext
     return cc
 
+class FHEScheme(ABC):
+    @abstractmethod
+    def getKeys(self, seed=None):
+        ...
+
+    @abstractmethod
+    def encrypt(self, plaintext):
+        ...
+
+    @abstractmethod
+    def decrypt(self, ciphertext):
+        ...
 
 
-ofhe_methods=dict([("generate_key", BinFHEContext.KeyGen), 
-("encrypt", CryptoContext.Encrypt), ("decrypt", CryptoContext.Decrypt),
-])
+class OpenFHEScheme(FHEScheme):
+    ...
+
+class TFHEScheme(FHEScheme):
+    ...
+
+ofhe_methods = {  
+    "generate_key": BinFHEContext.KeyGen,
+    "encrypt": CryptoContext.Encrypt,
+    "decrypt": CryptoContext.Decrypt
+}
 
 # add evalAdd method later
 
@@ -86,37 +107,39 @@ def test_enc_dec_ofhe(model):
 @pytest.mark.parametrize("model, plaintext", 
 [
     (tfhe, [0, 1, 0, 1]), 
-    (tfhe, 25),
     (tfhe, [2, 4, 6, 8])
-], 
+],
 ids=[
-    "TFHE bits", 
-    "TFHE int",
+    "TFHE list bits", 
     "TFHE list ints"
 ])
-def test_enc_dec_tfhe(model, plaintext):
+def test_list_enc_dec_tfhe(model, plaintext):
     rng = np.random.RandomState(123) # create a random value for key generation
     plain_t=plaintext 
     bit_list=[] # this object will be used if we have a list of integers
-    if type(plaintext) == list:
-        for i in plaintext:
-            if i>1 or i<0: # if the values in the list aren't bits (they are greater than 1 or less than 0)
-                bit=int_to_bitarray(i) # convert the integer to bits
-                bit_list.append(bit) # add the integer to the bit_list
-    elif type(plaintext) == int: # if a single integer is imported
-        plain_t=int_to_bitarray(plain_t) # convert that integer to bits
-    
-    if bit_list:
-        dec = [] # variable used if decrypting a list of integers
-        for i in bit_list:
-            private, public=get_methods(model, "generate_key")(rng) # generate a key
-            cipher=get_methods(model, "encrypt")(rng, private, np.array(i)) # encrypt plaintext
-            dec_item=get_methods(model, "decrypt")(private, cipher) # decrypt plaintext
-            dec_item=bitarray_to_int(dec_item) # convert bits back to integers
-            dec.append(dec_item) # add the values to a list
-        assert np.all(plain_t == dec)
-    else: # below is if we're encrypting or decrypting a single integer, process is same as above
-        private, public=get_methods(model, "generate_key")(rng)
-        cipher=get_methods(model, "encrypt")(rng, private, np.array(plain_t))
-        dec=get_methods(model, "decrypt")(private, cipher)
-        assert np.all(plain_t == dec)
+    for i in plain_t:
+            bit=int_to_bitarray(i) # convert the integer to bits
+            bit_list.append(bit) # add the integer to the bit_list
+        
+    private, public = get_methods(model, "generate_key")(rng)
+    dec = [] # variable used if decrypting a list of integers
+    for i in bit_list:
+        cipher=get_methods(model, "encrypt")(rng, private, np.array(i)) # encrypt plaintext
+        dec_item=get_methods(model, "decrypt")(private, cipher) # decrypt plaintext
+        dec_item=bitarray_to_int(dec_item) # convert bits back to integers
+        dec.append(dec_item) # add the values to a list
+    assert np.all(plain_t == dec) # check that values match
+
+
+@pytest.mark.parametrize("model, plaintext", 
+[(tfhe, 25)], ids=["TFHE int"])
+def test_int_enc_dec_tfhe(model, plaintext):
+    rng = np.random.RandomState(123)
+    plain_t=int_to_bitarray(plaintext)
+    private, public = get_methods(model, "generate_key")(rng)
+    cipher=get_methods(model, "encrypt")(rng, private, np.array(plain_t))
+    dec=get_methods(model, "decrypt")(private, cipher)
+    assert np.all(plain_t == dec) # check that values match
+
+#def test_add_ofhe(model, plaintext):
+
