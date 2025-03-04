@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import os, pytest
-import openfhe as ofhe
+# import openfhe as ofhe
 import tfhe as tfhe
 import numpy as np
 # from numpy.polynomial import Polynomial
@@ -76,14 +76,14 @@ tfhe_methods = {
 }
 
 def get_methods(model, method):
-    if(model==ofhe):
-        return ofhe_methods[method]
+    # if(model==ofhe):
+    #     return ofhe_methods[method]
     if(model==tfhe):
         return tfhe_methods[method]
 
 
-@pytest.mark.parametrize("model", [ofhe], ids=["OpenFHE"])
-def test_enc_dec_ofhe(model):
+# @pytest.mark.parametrize("model", [openfhe], ids=["OpenFHE"])
+def test_enc_dec_ofhe():
     plain_t=[2.0, 1.0, 2.0, 1.0]
     cc = setup_ofhe_ckks(4)
     keys = cc.KeyGen() # generates two keys to be stored in the "keys" variable
