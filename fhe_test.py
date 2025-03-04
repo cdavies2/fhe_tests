@@ -95,27 +95,27 @@ ids=[
     "TFHE list ints"
 ])
 def test_enc_dec_tfhe(model, plaintext):
-    rng = np.random.RandomState(123)
-    plain_t=plaintext
-    bit_list=[]
+    rng = np.random.RandomState(123) # create a random value for key generation
+    plain_t=plaintext 
+    bit_list=[] # this object will be used if we have a list of integers
     if type(plaintext) == list:
         for i in plaintext:
-            if i>1:
-                bit=int_to_bitarray(i)
-                bit_list.append(bit)
-    elif type(plaintext) == int:
-        plain_t=int_to_bitarray(plain_t)
+            if i>1 or i<0: # if the values in the list aren't bits (they are greater than 1 or less than 0)
+                bit=int_to_bitarray(i) # convert the integer to bits
+                bit_list.append(bit) # add the integer to the bit_list
+    elif type(plaintext) == int: # if a single integer is imported
+        plain_t=int_to_bitarray(plain_t) # convert that integer to bits
     
     if bit_list:
+        dec = [] # variable used if decrypting a list of integers
         for i in bit_list:
-            dec = []
-            private, public=get_methods(model, "generate_key")(rng)
-            cipher=get_methods(model, "encrypt")(rng, private, np.array(i))
-            dec_item=get_methods(model, "decrypt")(private, cipher)
-            dec_item=bitarray_to_int(dec_item)
-            dec.append(dec_item) # need to debug this loop for a list of integers
+            private, public=get_methods(model, "generate_key")(rng) # generate a key
+            cipher=get_methods(model, "encrypt")(rng, private, np.array(i)) # encrypt plaintext
+            dec_item=get_methods(model, "decrypt")(private, cipher) # decrypt plaintext
+            dec_item=bitarray_to_int(dec_item) # convert bits back to integers
+            dec.append(dec_item) # add the values to a list
         assert np.all(plain_t == dec)
-    else:
+    else: # below is if we're encrypting or decrypting a single integer, process is same as above
         private, public=get_methods(model, "generate_key")(rng)
         cipher=get_methods(model, "encrypt")(rng, private, np.array(plain_t))
         dec=get_methods(model, "decrypt")(private, cipher)
