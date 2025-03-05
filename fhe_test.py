@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-import os, pytest
+import os, pytest, math
 import openfhe as ofhe
 import tfhe as tfhe
 import numpy as np
-# from numpy.polynomial import Polynomial
+
 from tfhe.keys import(
     tfhe_decrypt,
     tfhe_encrypt,
@@ -23,8 +23,8 @@ from openfhe import(
 )
 
 # the strings below will be used to test encryption and decryption of encoded strings
-str1 = "Hi there" # this has eight characters, which is a power of two
-str2 = "the magic words are squeamish ossifrage" + (" " * 25) # temp solution, adding padding manually to reach a power of 2
+str1 = "Hello" 
+str2 = "the magic words are squeamish ossifrage"
 
 # the method below creates the necessary context for CKKS encryption to be performed using OpenFHE
 def setup_ofhe_ckks(size):
@@ -50,7 +50,17 @@ def ints_to_bits_tfhe(plain_list):
         bit=int_to_bitarray(i) # convert the integer to bits
         bit_list.append(bit) # add the integer to the bit_list
     return bit_list
-    
+
+def nearest_power_padding(str_obj, obj_len):
+    exp=int(math.log2(obj_len))
+    if (2**exp == obj_len):
+        return str_obj
+    else:
+        nearest_power=2**(exp + 1)
+        pad_len=nearest_power - obj_len
+        padded_str=str_obj + (" " * pad_len)
+        return padded_str
+        
         
 
 class FHEScheme(ABC):
@@ -109,8 +119,8 @@ def test_enc_dec_nums_ofhe(model, plaintext):
     # publicKey is used for encryption, secretKey is used for decryption
     precision=1 # tells us the decimal precision of our resulting values
     ptx=cc.MakeCKKSPackedPlaintext(plain_t) # converts the list of values to a plaintext object
-    c1 = cc.Encrypt(keys.publicKey, ptx) # encrypt the plaintext object using the public key
-    dec = cc.Decrypt(c1, keys.secretKey) # decrypt using the secret key
+    c1 = ofhe_scheme.encrypt(keys.publicKey, ptx) # encrypt the plaintext object using the public key
+    dec = ofhe_scheme.decrypt(keys.secretKey, c1) # decrypt using the secret key
     
 
     dec.GetFormattedValues(precision) # format the decrypted values to proper decimal point
@@ -125,14 +135,15 @@ def test_enc_dec_nums_ofhe(model, plaintext):
 @pytest.mark.parametrize("model, plaintext",
 [(ofhe, str1), (ofhe, str2)], ids=["OpenFHE short string", "OpenFHE magic words"])
 def test_enc_dec_str_ofhe(model, plaintext):
-    plain_t=plaintext
-    encoded_plain=[(char) for char in plaintext.encode("utf-8")]
+    plain_t=nearest_power_padding(plaintext, len(plaintext))
+    encoded_plain=[(char) for char in plain_t.encode("utf-8")]
     cc = setup_ofhe_ckks(len(encoded_plain))
-    keys = cc.KeyGen()
+    ofhe_scheme=OpenFHEScheme(cc)
+    keys = ofhe_scheme.getKeys()
     precision=1
     ptx=cc.MakeCKKSPackedPlaintext(encoded_plain) 
-    c1 = cc.Encrypt(keys.publicKey, ptx) 
-    dec = cc.Decrypt(c1, keys.secretKey) 
+    c1 = ofhe_scheme.encrypt(keys.publicKey, ptx) 
+    dec = ofhe_scheme.decrypt(keys.secretKey, c1)
     dec.GetFormattedValues(precision)
     vals=dec.GetRealPackedValue() # extract the plaintext values and put them in a list
     final=[]
@@ -141,8 +152,6 @@ def test_enc_dec_str_ofhe(model, plaintext):
         final.append(rounded) # round the extracted values to one decimal place
     
     assert np.all(encoded_plain == final)
-
-
 
 
 
