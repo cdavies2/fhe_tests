@@ -25,12 +25,14 @@ jobs:
         python-version: "3.12.8"
     - name: Install dependencies
       run: |
-        # git clone https://github.com/openfheorg/openfhe-development.git
-        # cd openfhe-development/
-        # mkdir build
-        # cd build
-        # cmake ..
-        # make -j
+        git clone https://github.com/openfheorg/openfhe-development.git
+        cd openfhe-development/
+        mkdir build
+        cd build
+        cmake ..
+        make -j1
+        make install
+        cd ..
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Lint with flake8
