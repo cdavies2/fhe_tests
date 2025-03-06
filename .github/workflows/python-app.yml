@@ -28,7 +28,7 @@ jobs:
         git clone https://github.com/openfheorg/openfhe-development.git
         cd openfhe-development/docker
         docker build -t openfhe-docker .
-        docker run -d -p 8888:8888 openfhe-docker -name openfhe
+        docker run -d -p 8888:8888 openfhe-docker --name openfhe
         # mkdir build
         # cd build
         # cmake ..
@@ -45,4 +45,4 @@ jobs:
         # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest --no-header  -v -rfs
+        docker run pytest --no-header  -v -rfs
