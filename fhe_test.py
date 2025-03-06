@@ -3,6 +3,7 @@ import os, pytest, math
 import openfhe as ofhe
 import tfhe as tfhe
 import numpy as np
+import fhe_schemes
 from numpy.typing import NDArray
 
 from tfhe.keys import(
@@ -71,7 +72,8 @@ class OpenFHEScheme(FHEScheme):
         self.cc=None # the cc value will be used for key generation, packing plaintext, encryption, and decryption
         self.private=None
         self.public=None
-
+        self.plaintext=None
+        self.plain_type=None
         # maybe make a variable for input type, as different operations are performed on strings
 
     #staticmethod is used here because these methods aren't bound to class objects   
@@ -118,10 +120,12 @@ class OpenFHEScheme(FHEScheme):
         return private, public
 
     def encrypt(self, plaintext):
+        self.plaintext=plaintext
+        self.plain_type=type(plaintext)
         start_len=len(plaintext) 
         plain_t=OpenFHEScheme.nearest_power_padding(plaintext, start_len) # add padding to ensure length is a power of two
 
-        if type(plaintext)==str:
+        if self.plain_type==str:
             plain_t=[(byte) for byte in plain_t.encode("utf-8")] # encode string characters into bytes using utf-8 format
         cc = OpenFHEScheme.setup_ckks(len(plain_t))  # create CKKS parameters for encryption
         self.cc=cc # save crypto context for use in other methods
@@ -129,7 +133,7 @@ class OpenFHEScheme(FHEScheme):
         if (self.private==None or self.public==None): # if there are no keys
             self.private, self.public=self.getKeys() # run the getKeys method
         ptx=self.cc.MakeCKKSPackedPlaintext(plain_t) # converts the list of values to a plaintext object
-        
+
         cipher=self.cc.Encrypt(self.public, ptx) # encrypt the ciphertext
         return cipher
 
@@ -145,48 +149,6 @@ class OpenFHEScheme(FHEScheme):
             final.append(rounded) # round the extracted values to one decimal place
         return final
 
-
-class TFHEScheme(FHEScheme):
-    def __init__(self):
-        self.seed=np.random.RandomState(123)
-        # self.private=None
-        # self.public=None
-        
-    @staticmethod
-    def ints_to_bits(plain_t):
-        bit_list=[] # this object will be used if we have a list of integers
-        if type(plain_t)==list:
-            for i in plain_t:
-                bit=np.array([((i >> j) & 1 != 0) for j in range(8)]) # convert the integer to bits
-                # >> is the piecewise shift operator
-                # we choose 8 for our number of bits because we are encoding bytes for our strings/ints
-                bit_list.append(bit) # add the encoded integer to the bit_list
-            return bit_list
-        else:
-            bit = (np.array([((plain_t >> j) & 1 != 0) for j in range(8)])) 
-            # if one integer is sent, convert it to a bit array
-            return bit #return the array
-
-    @staticmethod
-    def bits_to_ints(bit_list):
-        int_answer = 0  #this converts bits back to their initial number values
-        for i in range(8):
-            int_answer = int_answer | (bit_list[i] << i)
-        return int_answer  
-
-    def getKeys(self):
-        private, public = tfhe_key_pair(self.seed)
-        return private, public
-
-
-    def encrypt(self, key, plaintext):
-
-        # maybe add something here to convert the plaintext to bits if needed
-        cipher=tfhe_encrypt(self.seed, key, plaintext)
-        return cipher
-    def decrypt(self, key, ciphertext):
-        decrypt=tfhe_decrypt(key, ciphertext)
-        return decrypt
 
            
 @pytest.mark.parametrize("model, plaintext", 
@@ -229,48 +191,32 @@ ids=[
     "TFHE list ints"
 ])
 def test_list_enc_dec_tfhe(model, plaintext):
-    # rng = np.random.RandomState(123) # create a random value for key generation
-    tfhe_scheme=TFHEScheme()
-    plain_t=plaintext
-    bit_list=ints_to_bits(plaintext)
-    private, public = tfhe_scheme.getKeys()
-    dec = [] # variable used if decrypting a list of integers
-    for i in bit_list:
-        cipher=tfhe_scheme.encrypt(private, np.array(i)) # encrypt plaintext
-        dec_item=tfhe_scheme.decrypt(private, cipher) # decrypt plaintext
-        dec_item=bits_to_ints(dec_item) # convert bits back to integers
-        dec.append(dec_item) # add the values to a list
-    assert np.all(plain_t == dec) # check that values match
+    tfhe_scheme=fhe_schemes.TFHE() # initialize TFHE object, creating random seed
+    c1=tfhe_scheme.encrypt(plaintext) # encrypt plaintext
+    dec=tfhe_scheme.decrypt(c1) # decrypt plaintext
+    
+    assert np.all(plaintext == dec) # check that values match
 
 
 @pytest.mark.parametrize("model, plaintext", 
 [(tfhe, 25)], ids=["TFHE int"])
 def test_int_enc_dec_tfhe(model, plaintext):
-    # rng = np.random.RandomState(123)
-    tfhe_scheme=TFHEScheme()
-    plain_t=ints_to_bits(plaintext)
-    private, public = tfhe_scheme.getKeys()
-    cipher=tfhe_scheme.encrypt(private, np.array(plain_t))
-    dec=tfhe_scheme.decrypt(private, cipher)
-    # dec=bits_to_ints(dec_item)
-    assert np.all(plain_t == dec) # check that values match
+    tfhe_scheme=fhe_schemes.TFHE()
+    cipher=tfhe_scheme.encrypt(plaintext)
+    dec=tfhe_scheme.decrypt(cipher)
+    assert np.all(plaintext == dec) # check that values match
 
 
+# @pytest.mark.skip(reason="Debug")
 @pytest.mark.parametrize("model, plaintext",
 [(tfhe, str1), (tfhe, str2)], ids=["TFHE short string", "TFHE magic words"])
 def test_str_enc_dec_tfhe(model, plaintext):
-    # rng = np.random.RandomState(123)
-    tfhe_scheme=TFHEScheme()
-    private, public = tfhe_scheme.getKeys()
-    encoded_plain=[(byte) for byte in plaintext.encode("utf-8")]
-    bit_list=ints_to_bits(encoded_plain)
-    dec = [] 
-    for i in bit_list:
-        cipher=tfhe_scheme.encrypt(private, np.array(i))
-        dec_item=tfhe_scheme.decrypt(private, cipher) 
-        dec_item=bits_to_ints(dec_item) 
-        dec.append(dec_item) 
-    assert encoded_plain == dec
+    tfhe_scheme=fhe_schemes.TFHE()
+    # private, public = tfhe_scheme.getKeys()
+    # bit_list=ints_to_bits(encoded_plain)
+    cipher=tfhe_scheme.encrypt(plaintext)
+    dec=tfhe_scheme.decrypt(cipher) 
+    assert plaintext == dec
 
 
 
@@ -284,7 +230,7 @@ def test_str_enc_dec_tfhe(model, plaintext):
 #         scheme=OpenFHEScheme(cc)
 #     else:
 #         rng = np.random.RandomState(123)
-#         scheme=TFHEScheme(rng)
+#         scheme=TFHE(rng)
 #     encoded_plain=[(byte) for byte in plaintext.encode("utf-8")]
 #     private, public = scheme.getKeys()
 #     bit_list=ints_to_bits(encoded_plain)
