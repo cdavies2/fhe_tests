@@ -73,8 +73,10 @@ class OpenFHEScheme(FHEScheme):
         self.public=None
 
         # maybe make a variable for input type, as different operations are performed on strings
-    
-    def setup_ofhe_ckks(size):
+
+    #staticmethod is used here because these methods aren't bound to class objects   
+    @staticmethod
+    def setup_ckks(size):
         mult_depth = 1 # the maximum number of multiplications an HE scheme is built to perform
         scale_mod_size = 50 # the "key size", how many bits the key will be
         batch_size = size # number of values to be encrypted
@@ -91,7 +93,7 @@ class OpenFHEScheme(FHEScheme):
         # Enabling this feature allows us to create public and private keys to use with our plaintext
         return cc
 
-    # @staticmethod
+    @staticmethod
     def nearest_power_padding(obj: str | list, obj_len):
         # used with OpenFHE, as its batches must have lengths that are powers of two
         exp=int(math.log2(obj_len)) # get log2 of the string's length
@@ -117,16 +119,17 @@ class OpenFHEScheme(FHEScheme):
 
     def encrypt(self, plaintext):
         start_len=len(plaintext) 
-        plain_t=nearest_power_padding(plaintext, start_len) # add padding to ensure length is a power of two
+        plain_t=OpenFHEScheme.nearest_power_padding(plaintext, start_len) # add padding to ensure length is a power of two
 
         if type(plaintext)==str:
             plain_t=[(byte) for byte in plain_t.encode("utf-8")] # encode string characters into bytes using utf-8 format
-        cc = setup_ofhe_ckks(len(plain_t))  # create CKKS parameters for encryption
+        cc = OpenFHEScheme.setup_ckks(len(plain_t))  # create CKKS parameters for encryption
         self.cc=cc # save crypto context for use in other methods
 
         if (self.private==None or self.public==None): # if there are no keys
             self.private, self.public=self.getKeys() # run the getKeys method
         ptx=self.cc.MakeCKKSPackedPlaintext(plain_t) # converts the list of values to a plaintext object
+        
         cipher=self.cc.Encrypt(self.public, ptx) # encrypt the ciphertext
         return cipher
 
@@ -149,6 +152,7 @@ class TFHEScheme(FHEScheme):
         # self.private=None
         # self.public=None
         
+    @staticmethod
     def ints_to_bits(plain_t):
         bit_list=[] # this object will be used if we have a list of integers
         if type(plain_t)==list:
@@ -163,6 +167,7 @@ class TFHEScheme(FHEScheme):
             # if one integer is sent, convert it to a bit array
             return bit #return the array
 
+    @staticmethod
     def bits_to_ints(bit_list):
         int_answer = 0  #this converts bits back to their initial number values
         for i in range(8):
@@ -183,7 +188,7 @@ class TFHEScheme(FHEScheme):
         decrypt=tfhe_decrypt(key, ciphertext)
         return decrypt
 
-@pytest.mark.skip(reason="Debug")
+           
 @pytest.mark.parametrize("model, plaintext", 
 [
     (ofhe, [2.5, 3.4, 1.8, 5.2]),
