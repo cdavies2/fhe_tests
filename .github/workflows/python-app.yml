@@ -27,15 +27,12 @@ jobs:
     - name: Install dependencies
       run: |
         git clone https://github.com/openfheorg/openfhe-development.git
-        cd openfhe-development/docker
-        docker build -t openfhe-docker .
-        docker run -d -p 8888:8888 openfhe-docker --name openfhe
-        # mkdir build
-        # cd build
-        # cmake ..
-        # make -j1
-        # sudo make install
-        # cd ../..
+        mkdir build
+        cd build
+        cmake .. -DPYTHON_EXECUTABLE_PATH=$(which python)
+        make -j1
+        sudo make install
+        cd ../..
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Lint with flake8
