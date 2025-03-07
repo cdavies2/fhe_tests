@@ -125,21 +125,16 @@ class OpenFHE(FHEScheme):
 
     def generateKeyDict(self):
         sample_keys=collections.namedtuple('Keys', ['power', 'context', 'private', 'public'])
-        f=open("Crypto_Context.txt", "a") 
         for i in range(1, 10):
             num=2**i
             cc=OpenFHE.setup_ckks(num)
             self.cc=cc
             private, public = self.getKeys()
             new_val=sample_keys(num, cc, private, public)
-            key_dict=new_val._asdict()
-            f.write(str(new_val))
-            f.write("\n")
-        f.close()
+        return new_val
 
         # this code is used to invoke this method
-        # scheme2=ofhe_scheme.OpenFHE()
-        # scheme2.generateKeyDict()
+        
 
 
 

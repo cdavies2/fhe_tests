@@ -128,6 +128,8 @@ def test_addition(model, plaintext1, plaintext2):
     else:
         l_sums=plaintext1 + plaintext2
     cipher_sum=scheme.add(plaintext1, plaintext2)
+    scheme2=ofhe_scheme.OpenFHE()
+    new_dict=scheme2.generateKeyDict()
     assert np.all(l_sums==cipher_sum)
 
-def test_saved_keys()
+#def test_saved_keys()
