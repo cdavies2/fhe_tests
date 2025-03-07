@@ -29,7 +29,7 @@ jobs:
         git clone https://github.com/openfheorg/openfhe-development.git
         mkdir build
         cd build
-        cmake .. -DPYTHON_EXECUTABLE_PATH="$(which python)"
+        cmake -DPYTHON_EXECUTABLE_PATH="$(which python)" ..
         make -j1
         sudo make install
         cd ../..
